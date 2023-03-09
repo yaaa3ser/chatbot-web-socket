@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section style="background-color: #eee;">
+  <div class="container py-5">
+
+    <div class="row d-flex justify-content-center">
+      <div class="col-md-8 col-lg-6 col-xl-4">
+
+        <div class="card" id="chat1" style="border-radius: 15px;">
+          <div
+            class="card-header d-flex justify-content-between align-items-center p-3 bg-info text-white border-bottom-0"
+            style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+            <i class="fas fa-angle-left"></i>
+            <p class="mb-0 fw-bold">Live chat</p>
+            <i class="fas fa-times"></i>
+          </div>
+          <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+            <div class="chat-window">
+              {% for chat in data %}    
+              {% if chat.question %}
+                <div class="d-flex flex-row justify-content-start mb-4">
+                  <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
+                    alt="avatar 1" style="width: 45px; height: 100%;">
+                  <div class="p-3 ms-3" style="border-radius: 15px; background-color: rgba(57, 192, 237,.2);">
+                    <p class="small mb-0">{{ chat.question }}</p>
+                  </div>
+                </div>
+              {% endif %}
+              {% if chat.answer %}
+                <div class="d-flex flex-row justify-content-end mb-4">
+                  <div class="p-3 me-3 border" style="border-radius: 15px; background-color: #fbfbfb;">
+                    <p class="small mb-0">{{ chat.answer }}</p>
+                  </div>
+                  <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava2-bg.webp"
+                    alt="avatar 1" style="width: 45px; height: 100%;">
+                </div>
+              {% endif %}
+            {% endfor %}
+            </div>
+          </div>
+          <div class="form-outline fixed-bottom" id="input-box">
+            <form method="POST">
+              {% csrf_token %}
+              <input name="question" class="form-control" id="textAreaExample" rows="4" ></input>
+              <label class="form-label" for="textAreaExample">Type your message</label>
+              <button type="submit" class="btn btn-primary">Send</button>
+            </form>
+          
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  var chatWindow = document.querySelector('.card-body');
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+  // Connect to the Django Channels websocket
+  var chatSocket = new WebSocket(
+    'ws://' + window.location.host +
+    '/ws/chat/'
+  );
+
+  // Send message to the chatbot
+  document.querySelector('#input-box').addEventListener('submit', function(event) {
+    event.preventDefault();
+    var questionInput = event.target.querySelector('#textAreaExample');
+    var question = questionInput.value;
+    chatSocket.send(JSON.stringify({
+      'question': question
+    }));
+    questionInput.value = '';
+  });
+
+  // Receive message from the chatbot and update the chat window
+chatSocket.onmessage = function(event) {
+  var data = JSON.parse(event.data);
+  if (data.question) {
+    // Add user's question to chat window
+    var questionTemplate = `
+      <div class="d-flex flex-row justify-content-start mb-4">
+        <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava1-bg.webp"
+          alt="avatar 1" style="width: 45px; height: 100%;">
+        <div class="p-3 ms-3" style="border-radius: 15px; background-color: rgba(57, 192, 237,.2);">
+          <p class="small mb-0">${data.question}</p>
+        </div>
+      </div>
+    `;
+    chatWindow.insertAdjacentHTML('beforeend', questionTemplate);
+    // Scroll to bottom of chat window
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  } if (data.answer) {
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    // Add bot's answer to chat window
+    var answerTemplate = `
+      <div class="d-flex flex-row justify-content-end mb-4">
+        <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava2-bg.webp"
+          alt="avatar 1" style="width: 45px; height: 100%;">
+        <div class="p-3 me-3 border" style="border-radius: 15px; background-color: #fbfbfb;">
+          <p class="small mb-0">${data.answer}</p>
+        </div>
+      </div>
+    `;
+    chatWindow.insertAdjacentHTML('beforeend', answerTemplate);
+    // Scroll to bottom of chat window
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+};
+</script>
+
+{% endblock %}
